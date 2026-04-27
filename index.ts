@@ -84,7 +84,7 @@ async function authenticate(): Promise<number> {
 }
 
 const auth = new google.auth.GoogleAuth({
-  keyFile: "sales-score-pass.json",
+  keyFile: process.env.GOOGLE_KEYFILE,
   scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 
