@@ -313,10 +313,7 @@ function getCountedWeek(weekInput: string, monthInput: string, yearInput: string
     const validData: DailyReport[] = normalizedData.filter((item): item is DailyReport => item !== undefined && item.id !== null);
     console.log(normalizedData);
 
-    const emailSentTodayValues: number[] = normalizedData
-      .filter((item): item is DailyReport => item !== undefined && item.id !== null)
-      .map((item) => item.x_studio_email_sent_today)
-      .filter((v): v is number => v !== null);
+    const emailSentTodayValues: number[] = validData.map((item) => item.x_studio_email_sent_today).filter((v): v is number => v !== null);
 
     validData.length > 0 ? console.log(`Valid data that will be inputted:\n${JSON.stringify(validData, null, 2)}`) : console.log(`There is no valid data`);
     await append7DaysDynamic({
