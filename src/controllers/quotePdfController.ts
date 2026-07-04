@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { getCachedUid } from "../services/authServices";
 import { getSaleOrderQuoteData, getInvoiceData } from "../services/odooServices";
-import { generateSaleOrderPdf } from "../services/quotePdfService";
-import { SaleOrderQuoteData } from "../types/odoo.type";
+import { generateInvoicePdf, generateSaleOrderPdf } from "../services/quotePdfService";
 
 type docTypes = "quotation" | "invoice" | "sales-order";
 export async function downloadSaleOrderQuotePdf(req: Request, res: Response, next: NextFunction) {
@@ -44,32 +43,47 @@ export async function downloadSaleOrderQuotePdf(req: Request, res: Response, nex
       quotation: async (uid, dataId) => {
         const quoteData = await getSaleOrderQuoteData(uid, dataId);
         const isSale = false;
-        const pdf = await generateSaleOrderPdf(quoteData, isSale);
-        const filename = `Quotation-${safeFilename(quoteData.order.name)}.pdf`;
+        const pdfData = {
+          document: quoteData.document,
+          partner: quoteData.partner,
+          company: quoteData.company,
+          lines: quoteData.lines,
+          groupedLines: quoteData.groupedLines,
+        };
+        const pdf = await generateSaleOrderPdf(pdfData, isSale);
+        const filename = `Quotation-${safeFilename(quoteData.document.name)}.pdf`;
 
         return { pdf, filename };
       },
       invoice: async (uid, dataId) => {
         const quoteData = await getInvoiceData(uid, dataId);
         const isSale = false;
-        const pdf = await generateSaleOrderPdf(quoteData, isSale);
-        const filename = `Invoice-${safeFilename(quoteData.order.name)}.pdf`;
+        const pdfData = {
+          document: quoteData.document,
+          partner: quoteData.partner,
+          company: quoteData.company,
+          lines: quoteData.lines,
+          groupedLines: quoteData.groupedLines,
+        };
+        const pdf = await generateInvoicePdf(pdfData);
+        const filename = `Invoice-${safeFilename(quoteData.document.name)}.pdf`;
         return { pdf, filename };
       },
       "sales-order": async (uid, dataId) => {
         const quoteData = await getSaleOrderQuoteData(uid, dataId);
         const isSale = true;
-        const pdf = await generateSaleOrderPdf(quoteData, isSale);
-        const filename = `Sale Order-${safeFilename(quoteData.order.name)}.pdf`;
+        const pdfData = {
+          document: quoteData.document,
+          partner: quoteData.partner,
+          company: quoteData.company,
+          lines: quoteData.lines,
+          groupedLines: quoteData.groupedLines,
+        };
+        const pdf = await generateSaleOrderPdf(pdfData, isSale);
+        const filename = `Sale Order-${safeFilename(quoteData.document.name)}.pdf`;
         return { pdf, filename };
       },
     };
-
-    // const quoteData = await getSaleOrderQuoteData(uid, docId);
-
-    // const pdf = await generateSaleOrderPdf(quoteData);
-
-    // const filename = `Quotation-${safeFilename(quoteData.order.name)}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");
     const uid = await getCachedUid();

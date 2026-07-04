@@ -1,5 +1,7 @@
 // import { execute, authenticate } from "../odoo/odooRpc";
-import { UserSales, DailyReport, SaleOrderQuoteData, OdooSaleOrder, OdooSaleOrderLine, QuoteLineGroup, OdooCompany, OdooPartner } from "../types/odoo.type";
+import { UserSales, DailyReport } from "../types/odoo.type";
+import { SaleOrderData, InvoiceData, DocumentLineGroup, OdooDocumentLine, OdooPartner, OdooCompany, OdooSaleOrder, OdooSaleOrderLine, OdooInvoice, OdooInvoiceLine } from "../types/document.type";
+
 import fetch from "node-fetch";
 import { JsonRpcResponse } from "../types/odoo.type";
 import { ENV } from "../config/config";
@@ -122,7 +124,7 @@ export async function writeSpreadsheet(dates: string[], emailSentVal: number[], 
   } catch (error) {}
 }
 
-export async function getSaleOrderQuoteData(uid: number, saleOrderId: number): Promise<SaleOrderQuoteData> {
+export async function getSaleOrderQuoteData(uid: number, saleOrderId: number): Promise<SaleOrderData> {
   const orders = await execute<OdooSaleOrder[]>(uid, "sale.order", "read", [[saleOrderId]], {
     fields: ["id", "name", "state", "date_order", "validity_date", "partner_id", "company_id", "currency_id", "user_id", "amount_untaxed", "amount_tax", "amount_total", "order_line", "note", "payment_term_id"],
   });
@@ -158,21 +160,25 @@ export async function getSaleOrderQuoteData(uid: number, saleOrderId: number): P
 
   lines.sort((a, b) => a.sequence - b.sequence || a.id - b.id);
 
+  const groupedLines: DocumentLineGroup<OdooSaleOrderLine>[] = groupProductLinesWithNotes(lines);
+
   return {
-    order,
+    document: order,
     partner,
     company,
     lines,
-    groupedLines: groupProductLinesWithNotes(lines),
+    groupedLines,
   };
 }
 
-export async function getInvoiceData(uid: number, dataId: number): Promise<SaleOrderQuoteData> {
-  const orders = await execute<OdooSaleOrder[]>(uid, "account.move", "read", [[dataId]], {
+export async function getInvoiceData(uid: number, dataId: number): Promise<InvoiceData> {
+  const invoices = await execute<OdooInvoice[]>(uid, "account.move", "read", [[dataId]], {
     fields: [
       "id",
       "name",
       "state",
+      "move_type",
+      "payment_state",
       "invoice_date",
       "invoice_date_due",
       "partner_id",
@@ -184,19 +190,21 @@ export async function getInvoiceData(uid: number, dataId: number): Promise<SaleO
       "amount_total",
       "invoice_line_ids",
       "invoice_payment_term_id",
-      "payment_state",
-      "move_type",
+      "invoice_incoterm_id",
+      "invoice_origin",
+      "ref",
+      "narration",
     ],
   });
 
-  const order = orders[0];
+  const invoice = invoices[0];
 
-  if (!order) {
-    throw new Error(`Sales Order with ID ${dataId} was not found`);
+  if (!invoice) {
+    throw new Error(`Invoice with ID ${dataId} was not found`);
   }
 
-  const partnerId = Array.isArray(order.partner_id) ? order.partner_id[0] : null;
-  const companyId = Array.isArray(order.company_id) ? order.company_id[0] : null;
+  const partnerId = Array.isArray(invoice.partner_id) ? invoice.partner_id[0] : null;
+  const companyId = Array.isArray(invoice.company_id) ? invoice.company_id[0] : null;
 
   const partner = partnerId
     ? ((
@@ -214,23 +222,25 @@ export async function getInvoiceData(uid: number, dataId: number): Promise<SaleO
       )[0] ?? null)
     : null;
 
-  const lines = await execute<OdooSaleOrderLine[]>(uid, "sale.order.line", "read", [order.order_line], {
-    fields: ["id", "sequence", "display_type", "name", "product_id", "product_uom_qty", "product_uom_id", "price_unit", "discount", "price_subtotal", "price_total"],
+  const lines = await execute<OdooInvoiceLine[]>(uid, "account.move.line", "read", [invoice.invoice_line_ids], {
+    fields: ["id", "sequence", "display_type", "name", "product_id", "quantity", "product_uom_id", "price_unit", "discount", "price_subtotal", "price_total"],
   });
 
   lines.sort((a, b) => a.sequence - b.sequence || a.id - b.id);
 
+  const groupedLines: DocumentLineGroup<OdooInvoiceLine>[] = groupProductLinesWithNotes(lines);
+
   return {
-    order,
+    document: invoice,
     partner,
     company,
     lines,
-    groupedLines: groupProductLinesWithNotes(lines),
+    groupedLines,
   };
 }
 
-function groupProductLinesWithNotes(lines: OdooSaleOrderLine[]): QuoteLineGroup[] {
-  const groupedLines: QuoteLineGroup[] = [];
+function groupProductLinesWithNotes<T extends OdooDocumentLine>(lines: T[]): DocumentLineGroup<T>[] {
+  const groupedLines: DocumentLineGroup<T>[] = [];
 
   for (const line of lines) {
     if (line.display_type === "line_section") {
@@ -245,7 +255,7 @@ function groupProductLinesWithNotes(lines: OdooSaleOrderLine[]): QuoteLineGroup[
       const previousGroup = groupedLines[groupedLines.length - 1];
 
       if (previousGroup?.type === "product") {
-        previousGroup.notes.push(line);
+        (previousGroup as Extract<DocumentLineGroup<T>, { type: "product" }>).notes.push(line);
       } else {
         groupedLines.push({
           type: "section",
