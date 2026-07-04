@@ -3,13 +3,13 @@ import { getCachedUid } from "../services/authServices";
 import { getSaleOrderQuoteData, getInvoiceData } from "../services/odooServices";
 import { generateInvoicePdf, generateSaleOrderPdf } from "../services/quotePdfService";
 
-type docTypes = "quotation" | "invoice" | "sales-order";
+type docTypes = "draft" | "invoice" | "sale";
 export async function downloadSaleOrderQuotePdf(req: Request, res: Response, next: NextFunction) {
   try {
     const docId = Number(req.params.docId);
     const rawDocType = req.params.docChoice as string;
 
-    if (rawDocType !== "quotation" && rawDocType !== "invoice" && rawDocType !== "sales-order") {
+    if (rawDocType !== "draft" && rawDocType !== "invoice" && rawDocType !== "sale") {
       return res.status(400).json({ error: "Invalid document type requested" });
     }
 
@@ -40,7 +40,7 @@ export async function downloadSaleOrderQuotePdf(req: Request, res: Response, nex
     }
 
     const documentHandler: Record<docTypes, (uid: number, dataId: number) => Promise<{ pdf: Buffer; filename: string }>> = {
-      quotation: async (uid, dataId) => {
+      draft: async (uid, dataId) => {
         const quoteData = await getSaleOrderQuoteData(uid, dataId);
         const isSale = false;
         const pdfData = {
@@ -69,7 +69,7 @@ export async function downloadSaleOrderQuotePdf(req: Request, res: Response, nex
         const filename = `Invoice-${safeFilename(quoteData.document.name)}.pdf`;
         return { pdf, filename };
       },
-      "sales-order": async (uid, dataId) => {
+      sale: async (uid, dataId) => {
         const quoteData = await getSaleOrderQuoteData(uid, dataId);
         const isSale = true;
         const pdfData = {
