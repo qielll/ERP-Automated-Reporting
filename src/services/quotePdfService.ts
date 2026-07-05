@@ -580,7 +580,7 @@ function renderInvoiceHtml(data: DocumentData<OdooInvoice, OdooInvoiceLine>): st
       <tr><td>
         <main class="document-body">
           <section class="intro-grid">
-            <div class="quote-title">Invoice # ${escapeHtml(document.name)}</div>
+            <div class="quote-title">Invoice ${escapeHtml(document.name)}</div>
             <div class="customer-address">
               ${partnerAddressLines.map((line) => escapeHtml(line)).join("\n")}
             </div>
