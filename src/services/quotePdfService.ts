@@ -266,8 +266,20 @@ function renderQuoteHtml(data: DocumentData<OdooDocument, OdooDocumentLine>, isS
 
     .quote-table .description-col { width: 58%; }
     .quote-table .qty-col { width: 14%; }
-    .quote-table .unit-col { width: 14%; }
-    .quote-table .amount-col { width: 14%; }
+    .quote-table .unit-col { 
+      width: 14%; 
+      white-space: normal; 
+      overflow-wrap: break-word; 
+      word-wrap: break-word; 
+      word-break: break-word;
+    }
+    .quote-table .amount-col { 
+      width: 14%; 
+      white-space: normal; 
+      overflow-wrap: break-word; 
+      word-wrap: break-word; 
+      word-break: break-word;
+    }
 
     .text-right { text-align: right; white-space: nowrap; }
     .text-center { text-align: center; }
@@ -549,8 +561,20 @@ function renderInvoiceHtml(data: DocumentData<OdooInvoice, OdooInvoiceLine>): st
     .quote-table td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
     .quote-table .description-col { width: 58%; }
     .quote-table .qty-col { width: 14%; }
-    .quote-table .unit-col { width: 14%; }
-    .quote-table .amount-col { width: 14%; }
+    .quote-table .unit-col { 
+      width: 14%; 
+      white-space: normal; 
+      overflow-wrap: break-word; 
+      word-wrap: break-word; 
+      word-break: break-word;
+    }
+    .quote-table .amount-col { 
+      width: 14%; 
+      white-space: normal; 
+      overflow-wrap: break-word; 
+      word-wrap: break-word; 
+      word-break: break-word;
+    }
     .text-right { text-align: right; white-space: nowrap; }
     .text-center { text-align: center; }
     .product-main-row { background: #fff; }
