@@ -100,6 +100,8 @@ function renderQuoteHtml(data: DocumentData<OdooDocument, OdooDocumentLine>, isS
       z-index: 20;
       font-size: 12px;
       background: #fff;
+      border-top: 1px solid #ddd;
+      padding-top: 2mm;
     }
 
     /* --- TABLE STRUCTURAL SPACERS (THE FIX) --- */
@@ -388,16 +390,18 @@ function renderQuoteHtml(data: DocumentData<OdooDocument, OdooDocumentLine>, isS
 
   <footer class="doc-footer">
     <div class="footer-left">
+      ${/*
       <div class="company-name">PT PCBA Semiconductor International</div>
       <div><span class="label">NPWP:</span> 053077610321500</div>
       <div><span class="label">Bank:</span> OCBC</div>
       <div><span class="label">Account:</span> 090800031321</div>
       <div><span class="label">Swift Code:</span> NISPIDJA</div>
+      */ ""}
     </div>
 
     <div class="footer-right">
       <div><a class="website">www.psiglobaltech.com</a></div>
-     ${/* <div class="page-number"></div> */ ""}
+      <div class="page-number"></div>
     </div>
   </footer>
 
@@ -495,14 +499,17 @@ function renderDocumentFooter(): string {
   return `
   <footer class="doc-footer">
     <div class="footer-left">
+      ${/*
       <div class="company-name">PT PCBA Semiconductor International</div>
       <div><span class="label">NPWP:</span> 053077610321500</div>
       <div><span class="label">Bank:</span> OCBC</div>
       <div><span class="label">Account:</span> 090800031321</div>
       <div><span class="label">Swift Code:</span> NISPIDJA</div>
+      */ ""}
     </div>
     <div class="footer-right">
       <div><a class="website">www.psiglobaltech.com</a></div>
+      <div class="page-number"></div>
     </div>
   </footer>`;
 }
@@ -532,7 +539,7 @@ function renderInvoiceHtml(data: DocumentData<OdooInvoice, OdooInvoiceLine>): st
       background: #ffffff;
     }
     .doc-header { position: fixed; top: 8mm; left: 4mm; right: 4mm; height: 28mm; z-index: 20; }
-    .doc-footer { position: fixed; left: 4mm; right: 4mm; bottom: 4mm; height: 22mm; z-index: 20; font-size: 12px; background: #fff; }
+    .doc-footer { position: fixed; left: 4mm; right: 4mm; bottom: 4mm; height: 22mm; z-index: 20; font-size: 12px; background: #fff; border-top: 1px solid #ddd; padding-top: 2mm; }
     .page-container { width: 100%; border-collapse: collapse; border: none; }
     .page-container > thead > tr > td,
     .page-container > tbody > tr > td,
