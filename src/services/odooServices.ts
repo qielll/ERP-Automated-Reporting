@@ -126,7 +126,7 @@ export async function writeSpreadsheet(dates: string[], emailSentVal: number[], 
 
 export async function getSaleOrderQuoteData(uid: number, saleOrderId: number): Promise<SaleOrderData> {
   const orders = await execute<OdooSaleOrder[]>(uid, "sale.order", "read", [[saleOrderId]], {
-    fields: ["id", "name", "state", "date_order", "validity_date", "partner_id", "company_id", "currency_id", "user_id", "amount_untaxed", "amount_tax", "amount_total", "order_line", "note", "payment_term_id"],
+    fields: ["id", "name", "state", "date_order", "validity_date", "partner_id", "company_id", "currency_id", "user_id", "amount_untaxed", "amount_tax", "amount_total", "order_line", "note", "payment_term_id", "incoterm"],
   });
 
   const order = orders[0];

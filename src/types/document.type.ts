@@ -58,6 +58,7 @@ export type OdooSaleOrder = OdooDocument & {
   user_id: OdooMany2One;
 
   order_line: number[];
+  incoterm?: OdooMany2One;
 
   note?: string;
 
