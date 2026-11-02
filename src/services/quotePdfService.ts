@@ -1,4 +1,4 @@
-﻿import fs from "fs";
+import fs from "fs";
 import path from "path";
 import { chromium } from "playwright";
 import { DocumentData, DocumentLineGroup, OdooSaleOrder, OdooSaleOrderLine, OdooInvoice, OdooInvoiceLine, OdooMany2One, OdooPartner, OdooCompany, OdooPurchaseOrder, OdooPurchaseOrderLine, SaleOrderData } from "../types/document.type";
@@ -118,6 +118,12 @@ function injectPreviewHeader(bodyHtml: string, headerHtml: string): string {
 function renderInvoiceWithSignatureHtml(data: DocumentData<OdooInvoice, OdooInvoiceLine>, signerImageSrc?: string): string {
   const { document, partner, groupedLines } = data;
   const partnerAddressLines = getPartnerAddressLines(partner);
+  const hasPartNumber = Boolean(
+    data.hasPartNumber ??
+      groupedLines.some(
+        (g) => g.type === "product" && Boolean(g.line && g.line.x_studio_part_number && String(g.line.x_studio_part_number).trim())
+      )
+  );
 
   return `<!doctype html>
   <html>
@@ -150,8 +156,8 @@ function renderInvoiceWithSignatureHtml(data: DocumentData<OdooInvoice, OdooInvo
         .quote-table thead { display: table-header-group; }
         .quote-table th { border: 1px solid #0f2b5b; padding: 6px 8px; text-align: left; font-weight: 700; color: #fff; background: #0f2b5b; }
         .quote-table td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
-        .quote-table .no-col { width: 6%; text-align: center; }
-        .quote-table .description-col { width: 52%; }
+        .quote-table .no-col { width: ${hasPartNumber ? "14%" : "6%"}; text-align: center; overflow-wrap: break-word; word-break: break-word; }
+        .quote-table .description-col { width: ${hasPartNumber ? "44%" : "52%"}; }
         .quote-table .qty-col { width: 14%; }
         .quote-table .unit-col { width: 14%; white-space: normal; overflow-wrap: break-word; word-wrap: break-word; word-break: break-word; }
         .quote-table .amount-col { width: 14%; white-space: normal; overflow-wrap: break-word; word-wrap: break-word; word-break: break-word; }
@@ -248,7 +254,7 @@ function renderInvoiceWithSignatureHtml(data: DocumentData<OdooInvoice, OdooInvo
                 <table class="quote-table">
                   <thead>
                     <tr>
-                      <th class="no-col text-center">No.</th>
+                      <th class="no-col text-center">${hasPartNumber ? "Part Number" : "No."}</th>
                       <th class="description-col">Description</th>
                       <th class="qty-col text-center">Quantity</th>
                       <th class="unit-col text-right">Unit Price</th>
@@ -257,7 +263,7 @@ function renderInvoiceWithSignatureHtml(data: DocumentData<OdooInvoice, OdooInvo
                       <th class="amount-col text-right">Amount</th>
                     </tr>
                   </thead>
-                  ${groupedLines.map((group, index) => renderInvoiceLineGroup(group, index + 1, document.currency_id, hasDiscount, hasTaxes)).join("")}
+                  ${groupedLines.map((group, index) => renderInvoiceLineGroup(group, index + 1, document.currency_id, hasDiscount, hasTaxes, hasPartNumber)).join("")}
                 </table>`;
                 })()}
               </div>
@@ -374,6 +380,12 @@ function renderQuoteWithSignatureHtml(data: SaleOrderData, isSale: boolean, sign
 
   const quotationLabel = isSale ? "Sale Order #" : "Quotation #";
   const partnerAddressLines = getPartnerAddressLines(partner);
+  const hasPartNumber = Boolean(
+    data.hasPartNumber ??
+      groupedLines.some(
+        (g) => g.type === "product" && Boolean(g.line && g.line.x_studio_part_number && String(g.line.x_studio_part_number).trim())
+      )
+  );
 
   return `<!doctype html>
 <html>
@@ -559,8 +571,8 @@ function renderQuoteWithSignatureHtml(data: SaleOrderData, isSale: boolean, sign
       page-break-inside: auto;
     }
 
-    .quote-table .no-col { width: 6%; text-align: center; }
-    .quote-table .description-col { width: 52%; }
+    .quote-table .no-col { width: ${hasPartNumber ? "14%" : "6%"}; text-align: center; overflow-wrap: break-word; word-break: break-word; }
+    .quote-table .description-col { width: ${hasPartNumber ? "44%" : "52%"}; }
     .quote-table .qty-col { width: 14%; }
     .quote-table .unit-col {
       width: 14%;
@@ -807,7 +819,7 @@ function renderQuoteWithSignatureHtml(data: SaleOrderData, isSale: boolean, sign
               <table class="quote-table">
                 <thead>
                   <tr>
-                    <th class="no-col text-center">No.</th>
+                    <th class="no-col text-center">${hasPartNumber ? "Part Number" : "No."}</th>
                     <th class="description-col">Description</th>
                     <th class="qty-col text-center">Quantity</th>
                     <th class="unit-col text-right">Unit Price</th>
@@ -816,7 +828,7 @@ function renderQuoteWithSignatureHtml(data: SaleOrderData, isSale: boolean, sign
                     <th class="amount-col text-right">Amount</th>
                   </tr>
                 </thead>
-                ${groupedLines.map((group, index) => renderLineGroup(group, index + 1, document.currency_id, hasDiscount, hasTaxes)).join("")}
+                ${groupedLines.map((group, index) => renderLineGroup(group, index + 1, document.currency_id, hasDiscount, hasTaxes, hasPartNumber)).join("")}
               </table>`;
               })()}
             </div>
@@ -1003,6 +1015,12 @@ function renderQuoteHtml(data: SaleOrderData, isSale: boolean): string {
   const order = document as OdooSaleOrder;
   const quotationLabel = isSale ? "Sale Order #" : "Quotation #";
   const partnerAddressLines = getPartnerAddressLines(partner);
+  const hasPartNumber = Boolean(
+    data.hasPartNumber ??
+      groupedLines.some(
+        (g) => g.type === "product" && Boolean(g.line && g.line.x_studio_part_number && String(g.line.x_studio_part_number).trim())
+      )
+  );
 
   return `<!doctype html>
 <html>
@@ -1179,8 +1197,8 @@ function renderQuoteHtml(data: SaleOrderData, isSale: boolean): string {
       vertical-align: top;
     }
 
-    .quote-table .no-col { width: 6%; text-align: center; }
-    .quote-table .description-col { width: 52%; }
+    .quote-table .no-col { width: ${hasPartNumber ? "14%" : "6%"}; text-align: center; overflow-wrap: break-word; word-break: break-word; }
+    .quote-table .description-col { width: ${hasPartNumber ? "44%" : "52%"}; }
     .quote-table .qty-col { width: 14%; }
     .quote-table .unit-col { 
       width: 14%; 
@@ -1352,7 +1370,7 @@ function renderQuoteHtml(data: SaleOrderData, isSale: boolean): string {
               <table class="quote-table">
                 <thead>
                   <tr>
-                    <th class="no-col text-center">No.</th>
+                    <th class="no-col text-center">${hasPartNumber ? "Part Number" : "No."}</th>
                     <th class="description-col">Description</th>
                     <th class="qty-col text-center">Quantity</th>
                     <th class="unit-col text-right">Unit Price</th>
@@ -1361,7 +1379,7 @@ function renderQuoteHtml(data: SaleOrderData, isSale: boolean): string {
                     <th class="amount-col text-right">Amount</th>
                   </tr>
                 </thead>
-                ${groupedLines.map((group, index) => renderLineGroup(group, index + 1, document.currency_id, hasDiscount, hasTaxes)).join("")}
+                ${groupedLines.map((group, index) => renderLineGroup(group, index + 1, document.currency_id, hasDiscount, hasTaxes, hasPartNumber)).join("")}
               </table>`;
               })()}
             </div>
@@ -1442,6 +1460,12 @@ function renderQuoteHtml(data: SaleOrderData, isSale: boolean): string {
 function renderInvoiceHtml(data: DocumentData<OdooInvoice, OdooInvoiceLine>): string {
   const { document, partner, groupedLines } = data;
   const partnerAddressLines = getPartnerAddressLines(partner);
+  const hasPartNumber = Boolean(
+    data.hasPartNumber ??
+      groupedLines.some(
+        (g) => g.type === "product" && Boolean(g.line && g.line.x_studio_part_number && String(g.line.x_studio_part_number).trim())
+      )
+  );
 
   return `<!doctype html>
   <html>
@@ -1483,8 +1507,8 @@ function renderInvoiceHtml(data: DocumentData<OdooInvoice, OdooInvoiceLine>): st
         .quote-table thead { display: table-header-group; }
         .quote-table th { border: 1px solid #0f2b5b; padding: 6px 8px; text-align: left; font-weight: 700; color: #fff; background: #0f2b5b; }
         .quote-table td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
-        .quote-table .no-col { width: 6%; text-align: center; }
-        .quote-table .description-col { width: 52%; }
+        .quote-table .no-col { width: ${hasPartNumber ? "14%" : "6%"}; text-align: center; overflow-wrap: break-word; word-break: break-word; }
+        .quote-table .description-col { width: ${hasPartNumber ? "44%" : "52%"}; }
         .quote-table .qty-col { width: 14%; }
         .quote-table .unit-col { 
           width: 14%; 
@@ -1598,7 +1622,7 @@ function renderInvoiceHtml(data: DocumentData<OdooInvoice, OdooInvoiceLine>): st
                 <table class="quote-table">
                   <thead>
                     <tr>
-                      <th class="no-col text-center">No.</th>
+                      <th class="no-col text-center">${hasPartNumber ? "Part Number" : "No."}</th>
                       <th class="description-col">Description</th>
                       <th class="qty-col text-center">Quantity</th>
                       <th class="unit-col text-right">Unit Price</th>
@@ -1607,7 +1631,7 @@ function renderInvoiceHtml(data: DocumentData<OdooInvoice, OdooInvoiceLine>): st
                       <th class="amount-col text-right">Amount</th>
                     </tr>
                   </thead>
-                  ${groupedLines.map((group, index) => renderInvoiceLineGroup(group, index + 1, document.currency_id, hasDiscount, hasTaxes)).join("")}
+                  ${groupedLines.map((group, index) => renderInvoiceLineGroup(group, index + 1, document.currency_id, hasDiscount, hasTaxes, hasPartNumber)).join("")}
                 </table>`;
                 })()}
               </div>
@@ -1665,6 +1689,12 @@ function renderPurchaseOrderHtml(data: DocumentData<OdooPurchaseOrder, OdooPurch
   const companyName = company?.name || "PT PCBA Semiconductor International";
   const companyAddressLines = [companyName, company?.street || "Jl Raden Fatah No 6&7", `${company?.city || "Batam City"} ${company?.zip || "29444"}, Indonesia`];
   const partnerAddressLines = getPartnerAddressLines(partner);
+  const hasPartNumber = Boolean(
+    data.hasPartNumber ??
+      groupedLines.some(
+        (g) => g.type === "product" && Boolean(g.line && g.line.x_studio_part_number && String(g.line.x_studio_part_number).trim())
+      )
+  );
 
   return `<!doctype html>
   <html>
@@ -1736,8 +1766,8 @@ function renderPurchaseOrderHtml(data: DocumentData<OdooPurchaseOrder, OdooPurch
         .quote-table thead { display: table-header-group; }
         .quote-table th { border: 1px solid #0f2b5b; padding: 6px 8px; text-align: left; font-weight: 700; color: #fff; background: #0f2b5b; }
         .quote-table td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
-        .quote-table .no-col { width: 6%; text-align: center; }
-        .quote-table .description-col { width: 52%; }
+        .quote-table .no-col { width: ${hasPartNumber ? "14%" : "6%"}; text-align: center; overflow-wrap: break-word; word-break: break-word; }
+        .quote-table .description-col { width: ${hasPartNumber ? "44%" : "52%"}; }
         .quote-table .qty-col { width: 14%; }
         .quote-table .unit-col {
           width: 14%;
@@ -1852,7 +1882,7 @@ function renderPurchaseOrderHtml(data: DocumentData<OdooPurchaseOrder, OdooPurch
                 <table class="quote-table">
                   <thead>
                     <tr>
-                      <th class="no-col text-center">No.</th>
+                      <th class="no-col text-center">${hasPartNumber ? "Part Number" : "No."}</th>
                       <th class="description-col">Description</th>
                       <th class="qty-col text-center">Quantity</th>
                       <th class="unit-col text-right">Unit Price</th>
@@ -1861,7 +1891,7 @@ function renderPurchaseOrderHtml(data: DocumentData<OdooPurchaseOrder, OdooPurch
                       <th class="amount-col text-right">Amount</th>
                     </tr>
                   </thead>
-                  ${groupedLines.map((group, index) => renderPurchaseOrderLineGroup(group, index + 1, document.currency_id, hasDiscount, hasTaxes)).join("")}
+                  ${groupedLines.map((group, index) => renderPurchaseOrderLineGroup(group, index + 1, document.currency_id, hasDiscount, hasTaxes, hasPartNumber)).join("")}
                 </table>`;
                 })()}
               </div>
@@ -1903,7 +1933,7 @@ function renderPurchaseOrderHtml(data: DocumentData<OdooPurchaseOrder, OdooPurch
   </html>`;
 }
 
-function renderInvoiceLineGroup(group: DocumentLineGroup<OdooInvoiceLine>, displayNumber: number, currency: OdooMany2One, hasDiscount: boolean, hasTaxes: boolean): string {
+function renderInvoiceLineGroup(group: DocumentLineGroup<OdooInvoiceLine>, displayNumber: number, currency: OdooMany2One, hasDiscount: boolean, hasTaxes: boolean, hasPartNumber: boolean = false): string {
   const colSpan = 5 + (hasDiscount ? 1 : 0) + (hasTaxes ? 1 : 0);
   if (group.type === "section") {
     return `
@@ -1922,11 +1952,16 @@ function renderInvoiceLineGroup(group: DocumentLineGroup<OdooInvoiceLine>, displ
   const title = nameParts[0];
   const description = nameParts.length > 1 ? nameParts.slice(1).join("\n") : "";
   const extraNotes = group.notes.length > 0 ? group.notes.map((n) => formatNoteText(n.name)).join("\n\n") : "";
+  const displayCell = hasPartNumber
+    ? (line.x_studio_part_number && String(line.x_studio_part_number).trim()
+        ? escapeHtml(String(line.x_studio_part_number).trim())
+        : "-")
+    : displayNumber;
 
   return `
     <tbody class="line-block">
       <tr class="product-main-row">
-        <td class="no-col text-center">${displayNumber}</td>
+        <td class="no-col text-center">${displayCell}</td>
         <td class="description-cell">
           <div class="product-title">${escapeHtml(title)}</div>
           ${description ? `<div class="product-description">${formatNoteText(description)}</div>` : ""}
@@ -1942,7 +1977,7 @@ function renderInvoiceLineGroup(group: DocumentLineGroup<OdooInvoiceLine>, displ
   `;
 }
 
-function renderLineGroup(group: DocumentLineGroup<OdooSaleOrderLine>, displayNumber: number, currency: OdooMany2One, hasDiscount: boolean, hasTaxes: boolean): string {
+function renderLineGroup(group: DocumentLineGroup<OdooSaleOrderLine>, displayNumber: number, currency: OdooMany2One, hasDiscount: boolean, hasTaxes: boolean, hasPartNumber: boolean = false): string {
   const colSpan = 5 + (hasDiscount ? 1 : 0) + (hasTaxes ? 1 : 0);
   if (group.type === "section") {
     return `
@@ -1962,6 +1997,11 @@ function renderLineGroup(group: DocumentLineGroup<OdooSaleOrderLine>, displayNum
   const title = nameParts[0];
   const description = nameParts.length > 1 ? nameParts.slice(1).join("\n") : "";
   const extraNotes = group.notes.length > 0 ? group.notes.map((n) => formatNoteText(n.name)).join("\n\n") : "";
+  const displayCell = hasPartNumber
+    ? (line.x_studio_part_number && String(line.x_studio_part_number).trim()
+        ? escapeHtml(String(line.x_studio_part_number).trim())
+        : "-")
+    : displayNumber;
 
   // Combine full text to evaluate character count
   const fullText = description + (extraNotes ? "\n\n" + extraNotes : "");
@@ -1976,7 +2016,7 @@ function renderLineGroup(group: DocumentLineGroup<OdooSaleOrderLine>, displayNum
     // 1. SPLIT MODE: Render the main product title and pricing row first
     html += `
       <tr class="product-main-row">
-        <td class="no-col text-center" style="border-bottom: none;">${displayNumber}</td>
+        <td class="no-col text-center" style="border-bottom: none;">${displayCell}</td>
         <td class="description-cell" style="border-bottom: none;">
           <div class="product-title">${escapeHtml(title)}</div>
         </td>
@@ -2015,7 +2055,7 @@ function renderLineGroup(group: DocumentLineGroup<OdooSaleOrderLine>, displayNum
     // STANDARD MODE: Single-row render for short descriptions
     html += `
       <tr class="product-main-row">
-        <td class="no-col text-center">${displayNumber}</td>
+        <td class="no-col text-center">${displayCell}</td>
         <td class="description-cell">
           <div class="product-title">${escapeHtml(title)}</div>
           ${description ? `<div class="product-description">${formatNoteText(description)}</div>` : ""}
@@ -2034,7 +2074,7 @@ function renderLineGroup(group: DocumentLineGroup<OdooSaleOrderLine>, displayNum
   return html;
 }
 
-function renderPurchaseOrderLineGroup(group: DocumentLineGroup<OdooPurchaseOrderLine>, displayNumber: number, currency: OdooMany2One, hasDiscount: boolean, hasTaxes: boolean): string {
+function renderPurchaseOrderLineGroup(group: DocumentLineGroup<OdooPurchaseOrderLine>, displayNumber: number, currency: OdooMany2One, hasDiscount: boolean, hasTaxes: boolean, hasPartNumber: boolean = false): string {
   const colSpan = 5 + (hasDiscount ? 1 : 0) + (hasTaxes ? 1 : 0);
   if (group.type === "section") {
     return `
@@ -2051,6 +2091,11 @@ function renderPurchaseOrderLineGroup(group: DocumentLineGroup<OdooPurchaseOrder
   const title = nameParts[0];
   const description = nameParts.length > 1 ? nameParts.slice(1).join("\n") : "";
   const extraNotes = group.notes.length > 0 ? group.notes.map((n) => formatNoteText(n.name)).join("\n\n") : "";
+  const displayCell = hasPartNumber
+    ? (line.x_studio_part_number && String(line.x_studio_part_number).trim()
+        ? escapeHtml(String(line.x_studio_part_number).trim())
+        : "-")
+    : displayNumber;
 
   const taxesDisplay = line.tax_names && line.tax_names.length > 0 ? line.tax_names.join(", ") : "-";
   const discountDisplay = line.discount ? `${line.discount}%` : "-";
@@ -2058,7 +2103,7 @@ function renderPurchaseOrderLineGroup(group: DocumentLineGroup<OdooPurchaseOrder
   return `
     <tbody class="line-block">
       <tr class="product-main-row">
-        <td class="no-col text-center">${displayNumber}</td>
+        <td class="no-col text-center">${displayCell}</td>
         <td class="description-cell">
           <div class="product-title">${escapeHtml(title)}</div>
           ${description ? `<div class="product-description">${formatNoteText(description)}</div>` : ""}

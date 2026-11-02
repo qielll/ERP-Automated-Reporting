@@ -1,4 +1,4 @@
-﻿import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from "express";
 import { getCachedUid } from "../services/authServices";
 import fs from "fs";
 import { getSaleOrderQuoteData, getInvoiceData, getPurchaseOrder } from "../services/odooServices";
@@ -62,6 +62,7 @@ export async function downloadSaleOrderQuotePdf(req: Request, res: Response, nex
           company: quoteData.company,
           lines: quoteData.lines,
           groupedLines: quoteData.groupedLines,
+          hasPartNumber: quoteData.hasPartNumber,
         };
         // const pdf = await generateSaleOrderPdf(pdfData, isSale);
         const pdf = await generateQuoteWithSignaturePdf(pdfData, false, signerImageSrc);
@@ -78,6 +79,7 @@ export async function downloadSaleOrderQuotePdf(req: Request, res: Response, nex
           company: quoteData.company,
           lines: quoteData.lines,
           groupedLines: quoteData.groupedLines,
+          hasPartNumber: quoteData.hasPartNumber,
         };
         // const pdf = await generateInvoicePdf(pdfData);
         const pdf = await generateInvoiceWithSignaturePdf(pdfData, signerImageSrc);
@@ -93,6 +95,7 @@ export async function downloadSaleOrderQuotePdf(req: Request, res: Response, nex
           company: quoteData.company,
           lines: quoteData.lines,
           groupedLines: quoteData.groupedLines,
+          hasPartNumber: quoteData.hasPartNumber,
         };
         const pdf = await generateSaleOrderPdf(pdfData, isSale);
         const filename = `Sale Order-${safeFilename(quoteData.document.name)}.pdf`;
@@ -106,6 +109,7 @@ export async function downloadSaleOrderQuotePdf(req: Request, res: Response, nex
           company: quoteData.company,
           lines: quoteData.lines,
           groupedLines: quoteData.groupedLines,
+          hasPartNumber: quoteData.hasPartNumber,
         };
         const pdf = await generatePurchasePdf(pdfData);
         const filename = `Purchase Order-${safeFilename(quoteData.document.name)}.pdf`;
@@ -187,6 +191,7 @@ export async function previewDocumentHtml(req: Request, res: Response, next: Nex
         company: invoiceData.company,
         lines: invoiceData.lines,
         groupedLines: invoiceData.groupedLines,
+        hasPartNumber: invoiceData.hasPartNumber,
       };
       html = withSignature ? previewInvoiceWithSignatureHtml(pdfData, signerImageSrc) : previewInvoiceHtml(pdfData);
     } else {
@@ -198,6 +203,7 @@ export async function previewDocumentHtml(req: Request, res: Response, next: Nex
         company: purchaseData.company,
         lines: purchaseData.lines,
         groupedLines: purchaseData.groupedLines,
+        hasPartNumber: purchaseData.hasPartNumber,
       };
       html = previewPurchaseHtml(pdfData);
     }

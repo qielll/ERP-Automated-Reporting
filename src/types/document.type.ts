@@ -48,6 +48,7 @@ export interface OdooDocumentLine {
   display_type: false | "line_section" | "line_note";
 
   name: string;
+  x_studio_part_number?: string | false;
 }
 
 export type OdooSaleOrder = OdooDocument & {
@@ -63,6 +64,7 @@ export type OdooSaleOrder = OdooDocument & {
   note?: string;
 
   payment_term_id?: OdooMany2One;
+  x_studio_part_number?: string | false;
 };
 
 export type OdooInvoice = OdooDocument & {
@@ -160,6 +162,7 @@ export type OdooSaleOrderLine = {
   tax_id?: number[];
   tax_ids?: number[];
   tax_names?: string[];
+  x_studio_part_number?: string | false;
 };
 
 export type DocumentLineGroup<T extends OdooDocumentLine> =
@@ -183,6 +186,8 @@ export type DocumentData<TDocument, TLine extends OdooDocumentLine> = {
   lines: TLine[];
 
   groupedLines: DocumentLineGroup<TLine>[];
+
+  hasPartNumber?: boolean;
 };
 
 

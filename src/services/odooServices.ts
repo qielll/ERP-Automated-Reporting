@@ -176,7 +176,7 @@ export async function getSaleOrderQuoteData(uid: number, saleOrderId: number): P
     : null;
 
   const lines = await execute<OdooSaleOrderLine[]>(uid, "sale.order.line", "read", [order.order_line], {
-    fields: ["id", "sequence", "display_type", "name", "product_id", "product_uom_qty", "product_uom_id", "price_unit", "discount", "price_subtotal", "price_total"],
+    fields: ["id", "sequence", "display_type", "name", "product_id", "product_uom_qty", "product_uom_id", "price_unit", "discount", "price_subtotal", "price_total", "x_studio_part_number"],
   });
 
   const allTaxIds = Array.from(new Set(lines.flatMap((line) => line.tax_id || [])));
@@ -202,6 +202,7 @@ export async function getSaleOrderQuoteData(uid: number, saleOrderId: number): P
   lines.sort((a, b) => a.sequence - b.sequence || a.id - b.id);
 
   const groupedLines: DocumentLineGroup<OdooSaleOrderLine>[] = groupProductLinesWithNotes(lines);
+  const hasPartNumber = lines.some((line) => typeof line.x_studio_part_number === "string" && line.x_studio_part_number.trim().length > 0);
 
   return {
     document: order,
@@ -209,6 +210,7 @@ export async function getSaleOrderQuoteData(uid: number, saleOrderId: number): P
     company,
     lines,
     groupedLines,
+    hasPartNumber,
   };
 }
 
@@ -287,6 +289,7 @@ export async function getInvoiceData(uid: number, dataId: number): Promise<Invoi
   lines.sort((a, b) => a.sequence - b.sequence || a.id - b.id);
 
   const groupedLines: DocumentLineGroup<OdooInvoiceLine>[] = groupProductLinesWithNotes(lines);
+  const hasPartNumber = false;
 
   return {
     document: invoice,
@@ -294,6 +297,7 @@ export async function getInvoiceData(uid: number, dataId: number): Promise<Invoi
     company,
     lines,
     groupedLines,
+    hasPartNumber,
   };
 }
 
@@ -370,6 +374,7 @@ export async function getPurchaseOrder(uid: number, dataId: number): Promise<Pur
   lines.sort((a, b) => a.sequence - b.sequence || a.id - b.id);
 
   const groupedLines: DocumentLineGroup<OdooPurchaseOrderLine>[] = groupProductLinesWithNotes(lines);
+  const hasPartNumber = false;
 
   return {
     document: purchase,
@@ -377,6 +382,7 @@ export async function getPurchaseOrder(uid: number, dataId: number): Promise<Pur
     company,
     lines,
     groupedLines,
+    hasPartNumber,
   };
 }
 
