@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { downloadSaleOrderQuotePdf, previewDocumentHtml } from "../controllers/quotePdfController";
+import { downloadSaleOrderQuotePdf, previewDocumentHtml, attachQuotePdfToLead } from "../controllers/quotePdfController";
 
 const router = Router();
 
@@ -19,5 +19,12 @@ router.get("/odoo/document/:docId/:docChoice/pdf", downloadSaleOrderQuotePdf);
  *   http://localhost:8000/api/odoo/document/1234/purchase-order/preview
  */
 router.get("/odoo/document/:docId/:docChoice/preview", previewDocumentHtml);
+
+/**
+ * Generates the quotation PDF and posts it to the linked CRM lead's chatter as a Log Note.
+ * GET (Odoo button, ?secret=...) answers with an HTML page; POST (X-Secret header) answers with JSON.
+ */
+router.get("/odoo/document/:docId/:docChoice/attach-to-lead", attachQuotePdfToLead);
+router.post("/odoo/document/:docId/:docChoice/attach-to-lead", attachQuotePdfToLead);
 
 export default router;

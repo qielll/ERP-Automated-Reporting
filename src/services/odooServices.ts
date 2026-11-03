@@ -386,6 +386,62 @@ export async function getPurchaseOrder(uid: number, dataId: number): Promise<Pur
   };
 }
 
+export type AttachPdfResult = {
+  orderName: string;
+  leadId: number;
+  leadName: string;
+  attachmentId: number;
+  messageId: number;
+};
+
+/**
+ * Attaches a rendered quotation PDF to the CRM lead linked to the sale order,
+ * as an internal Log Note. Returns null when the order has no linked lead.
+ */
+export async function attachPdfToLead(uid: number, saleOrderId: number, filename: string, pdf: Buffer): Promise<AttachPdfResult | null> {
+  const orders = await execute<{ id: number; name: string; opportunity_id: [number, string] | false }[]>(uid, "sale.order", "read", [[saleOrderId]], {
+    fields: ["name", "opportunity_id"],
+  });
+
+  const order = orders[0];
+  if (!order) {
+    throw new Error(`Sales Order with ID ${saleOrderId} was not found`);
+  }
+  if (!Array.isArray(order.opportunity_id)) {
+    return null;
+  }
+
+  const [leadId, leadName] = order.opportunity_id;
+
+  const created = await execute<number | number[]>(uid, "ir.attachment", "create", [
+    {
+      name: filename,
+      type: "binary",
+      datas: pdf.toString("base64"),
+      mimetype: "application/pdf",
+      res_model: "crm.lead",
+      res_id: leadId,
+    },
+  ]);
+  const attachmentId = Array.isArray(created) ? created[0] : created;
+
+  // message_post comes back as a bare id or a one-element list depending on the Odoo version
+  const posted = await execute<number | number[]>(uid, "crm.lead", "message_post", [[leadId]], {
+    // Odoo escapes a plain string body sent over RPC, so send text, not HTML.
+    body: `Quotation ${order.name} PDF`,
+    message_type: "comment",
+    subtype_xmlid: "mail.mt_note",
+    attachment_ids: [attachmentId],
+  });
+  const messageId = Array.isArray(posted) ? posted[0] : posted;
+
+  return { orderName: order.name, leadId, leadName, attachmentId, messageId };
+}
+
+export function escapeHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 function groupProductLinesWithNotes<T extends OdooDocumentLine>(lines: T[]): DocumentLineGroup<T>[] {
   const groupedLines: DocumentLineGroup<T>[] = [];
 

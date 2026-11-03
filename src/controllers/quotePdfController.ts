@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { getCachedUid } from "../services/authServices";
 import fs from "fs";
-import { getSaleOrderQuoteData, getInvoiceData, getPurchaseOrder } from "../services/odooServices";
+import crypto from "crypto";
+import { getSaleOrderQuoteData, getInvoiceData, getPurchaseOrder, attachPdfToLead, escapeHtml } from "../services/odooServices";
+import { ENV } from "../config/config";
 import {
   generateInvoicePdf,
   generatePurchasePdf,
@@ -134,6 +136,105 @@ export async function downloadSaleOrderQuotePdf(req: Request, res: Response, nex
 
 function safeFilename(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+// ---------------------------------------------------------------------------
+// Attach the quotation PDF to the CRM lead's chatter as an internal Log Note.
+//
+//   GET  /api/odoo/document/:docId/:docChoice/attach-to-lead?secret=...
+//        used by the Odoo button (act_url can't send headers); answers with a small HTML page
+//   POST /api/odoo/document/:docId/:docChoice/attach-to-lead   (X-Secret header)
+//        answers with JSON
+//
+// :docChoice is "auto" (by order state: draft/sent => quotation, otherwise sale order),
+// "draft" (always the quotation) or "sale" (always the sale order).
+// Unlike the PDF route, this one fails closed: no ODOO_PDF_SECRET configured => 401.
+// ---------------------------------------------------------------------------
+function isAuthorized(req: Request): boolean {
+  const expected = process.env.ODOO_PDF_SECRET;
+  if (!expected) return false;
+
+  const header = req.get("x-secret");
+  const incoming = header ? header : typeof req.query.secret === "string" ? req.query.secret : "";
+
+  const a = Buffer.from(incoming);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+// docType "auto" picks by the order's state: draft and sent are still quotations, anything else is a sale order.
+async function renderSaleOrderPdf(uid: number, docType: "auto" | "draft" | "sale", docId: number): Promise<{ pdf: Buffer; filename: string }> {
+  const stampBase64 = fs.readFileSync("./src/assets/sign-psi.png").toString("base64");
+  const signerImageSrc = `data:image/png;base64,${stampBase64}`;
+
+  const quoteData = await getSaleOrderQuoteData(uid, docId);
+  const isQuotation = docType === "auto" ? quoteData.document.state === "draft" || quoteData.document.state === "sent" : docType === "draft";
+  const pdfData = {
+    document: quoteData.document,
+    partner: quoteData.partner,
+    company: quoteData.company,
+    lines: quoteData.lines,
+    groupedLines: quoteData.groupedLines,
+    hasPartNumber: quoteData.hasPartNumber,
+  };
+
+  if (isQuotation) {
+    const pdf = await generateQuoteWithSignaturePdf(pdfData, false, signerImageSrc);
+    return { pdf, filename: `Quotation-${safeFilename(quoteData.document.name)}.pdf` };
+  }
+
+  const pdf = await generateSaleOrderPdf(pdfData, true);
+  return { pdf, filename: `Sale Order-${safeFilename(quoteData.document.name)}.pdf` };
+}
+
+function odooLeadUrl(leadId: number): string | null {
+  try {
+    return `${new URL(ENV.ODOO_URL as string).origin}/odoo/crm.lead/${leadId}`;
+  } catch {
+    return null;
+  }
+}
+
+function resultPage(ok: boolean, message: string, linkUrl: string | null): string {
+  const link = linkUrl ? `<p><a href="${escapeHtml(linkUrl)}">Open the lead in Odoo</a></p>` : "";
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${ok ? "PDF attached" : "Not attached"}</title></head>
+<body style="font-family:sans-serif;max-width:560px;margin:48px auto;padding:0 16px">
+<h2 style="color:${ok ? "#1a7f37" : "#b3261e"}">${ok ? "PDF attached to the lead" : "Could not attach the PDF"}</h2>
+<p>${escapeHtml(message)}</p>${link}</body></html>`;
+}
+
+export async function attachQuotePdfToLead(req: Request, res: Response, next: NextFunction) {
+  const wantsHtml = req.method === "GET";
+  const reply = (status: number, ok: boolean, message: string, linkUrl: string | null = null, extra: object = {}) =>
+    wantsHtml ? res.status(status).type("html").send(resultPage(ok, message, linkUrl)) : res.status(status).json({ ok, message, ...extra });
+
+  try {
+    if (!isAuthorized(req)) {
+      return reply(401, false, "Unauthorized");
+    }
+
+    const docId = Number(req.params.docId);
+    const docType = req.params.docChoice as string;
+
+    if (docType !== "auto" && docType !== "draft" && docType !== "sale") {
+      return reply(400, false, 'Document type must be "auto", "draft" (quotation) or "sale" (sale order).');
+    }
+    if (!Number.isInteger(docId) || docId <= 0) {
+      return reply(400, false, "Invalid Sales Order ID");
+    }
+
+    const uid = await getCachedUid();
+    const { pdf, filename } = await renderSaleOrderPdf(uid, docType, docId);
+    const result = await attachPdfToLead(uid, docId, filename, pdf);
+
+    if (!result) {
+      return reply(422, false, "This quotation is not linked to a CRM lead (Opportunity field is empty), so there is nowhere to attach the PDF.");
+    }
+
+    return reply(200, true, `${filename} was added to the chatter of "${result.leadName}" as a Log Note.`, odooLeadUrl(result.leadId), result);
+  } catch (error) {
+    next(error);
+  }
 }
 
 // ---------------------------------------------------------------------------
