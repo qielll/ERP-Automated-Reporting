@@ -5,6 +5,7 @@ import { ENV } from "./config/config";
 import cors from "cors";
 import reportRoutes from "./routes/odooRoute";
 import quotePdfRoutes from "./routes/quotePdfRoutes";
+import telegramRoutes from "./routes/telegramRoutes";
 
 //cors setup
 
@@ -23,6 +24,7 @@ const PORT = process.env.PORT || 8000;
 //routes
 app.use("/api", reportRoutes);
 app.use("/api", quotePdfRoutes);
+app.use("/api", telegramRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
