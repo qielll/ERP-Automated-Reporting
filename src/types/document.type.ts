@@ -11,6 +11,10 @@ export type OdooPartner = {
   country_id?: OdooMany2One;
   contact_address?: string;
   vat?: string;
+  // A contact person's `name` is the person only; the company is the parent record.
+  parent_id?: OdooMany2One;
+  commercial_company_name?: string | false;
+  is_company?: boolean;
 };
 
 export type OdooCompany = {

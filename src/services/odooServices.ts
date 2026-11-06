@@ -22,6 +22,10 @@ import { ENV } from "../config/config";
 import { getMailSent } from "../utils/main.util";
 import { append7DaysDynamic } from "../utils/integration.util";
 
+// Partner fields every document needs. parent_id / commercial_company_name give the company
+// of a contact person, which the printed customer block shows before the person's name.
+const PARTNER_FIELDS = ["id", "name", "parent_id", "commercial_company_name", "is_company", "street", "street2", "city", "zip", "state_id", "country_id", "contact_address", "vat"];
+
 type ReportsResult = {
   dailyMail: DailyReport[];
   emailSentValues: number[];
@@ -162,7 +166,7 @@ export async function getSaleOrderQuoteData(uid: number, saleOrderId: number): P
   const partner = partnerId
     ? ((
         await execute<OdooPartner[]>(uid, "res.partner", "read", [[partnerId]], {
-          fields: ["id", "name", "street", "street2", "city", "zip", "state_id", "country_id", "contact_address", "vat"],
+          fields: PARTNER_FIELDS,
         })
       )[0] ?? null)
     : null;
@@ -252,7 +256,7 @@ export async function getInvoiceData(uid: number, dataId: number): Promise<Invoi
   const partner = partnerId
     ? ((
         await execute<OdooPartner[]>(uid, "res.partner", "read", [[partnerId]], {
-          fields: ["id", "name", "street", "street2", "city", "zip", "state_id", "country_id", "contact_address", "vat"],
+          fields: PARTNER_FIELDS,
         })
       )[0] ?? null)
     : null;
@@ -336,7 +340,7 @@ export async function getPurchaseOrder(uid: number, dataId: number): Promise<Pur
   const partner = partnerId
     ? ((
         await execute<OdooPartner[]>(uid, "res.partner", "read", [[partnerId]], {
-          fields: ["id", "name", "street", "street2", "city", "zip", "state_id", "country_id", "contact_address", "vat"],
+          fields: PARTNER_FIELDS,
         })
       )[0] ?? null)
     : null;

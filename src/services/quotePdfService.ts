@@ -2131,30 +2131,43 @@ function renderTerms(note?: string): string {
   `;
 }
 
-function getPartnerAddressLines(partner: OdooPartner | null): string[] {
+export function getPartnerAddressLines(partner: OdooPartner | null): string[] {
   if (!partner) return [];
 
-  const lines: string[] = [];
+  // For a contact person `partner.name` is only the person; the company is the parent record.
+  const person = (partner.name || "").trim();
+  const company = (partner.commercial_company_name || (Array.isArray(partner.parent_id) ? partner.parent_id[1] : "") || "").trim();
 
-  if (partner.name) lines.push(partner.name);
+  const header: string[] = [];
+  if (company && company !== person) {
+    header.push(company);
+    if (person) header.push(person);
+  } else if (person) {
+    header.push(person);
+  }
 
-  if (partner.street) lines.push(partner.street);
-  if (partner.street2) lines.push(partner.street2);
+  const address: string[] = [];
+
+  if (partner.street) address.push(partner.street);
+  if (partner.street2) address.push(partner.street2);
 
   const cityLine = [partner.city, partner.state_id ? m2oName(partner.state_id) : "", partner.zip].filter(Boolean).join(" ");
 
-  if (cityLine) lines.push(cityLine);
+  if (cityLine) address.push(cityLine);
 
-  if (partner.country_id) lines.push(m2oName(partner.country_id));
+  if (partner.country_id) address.push(m2oName(partner.country_id));
 
-  if (lines.length <= 1 && partner.contact_address) {
-    return partner.contact_address
+  if (address.length === 0 && partner.contact_address) {
+    // Odoo's formatted address repeats the company name first; the header above already has it.
+    const alreadyShown = new Set([company, person]);
+    const fallback = partner.contact_address
       .split("\n")
       .map((line) => line.trim())
-      .filter(Boolean);
+      .filter((line) => line && !alreadyShown.has(line));
+    return [...header, ...fallback];
   }
 
-  return lines;
+  return [...header, ...address];
 }
 
 function getUomName(line: OdooSaleOrderLine): string {
